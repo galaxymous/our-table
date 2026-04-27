@@ -1,12 +1,13 @@
 # Original photo files (not needed — previews/ has web-friendly versions)
 *.HEIC
 *.heic
-/IMG_*.JPG
-/IMG_*.jpg
-/IMG_*.JPEG
-/IMG_*.jpeg
-/IMG_*.PNG
-/IMG_*.png
+/*.JPG
+/*.jpg
+/*.JPEG
+/*.jpeg
+/*.PNG
+/*.png
+!previews/*.jpg
 
 # Build/dev scripts
 *.py

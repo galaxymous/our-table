@@ -362,7 +362,7 @@
   .badges-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
     margin-bottom: 12px;
   }
@@ -375,7 +375,27 @@
     padding: 5px 12px;
     border-radius: 999px;
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
   }
+  .badge.music { background: #c2622a; color: #fdf3e7; }
+  .badge.michelin {
+    background: linear-gradient(135deg, #b89460 0%, #d8b98c 60%, #b89460 100%);
+    color: #2a1f12;
+    border: 1px solid rgba(160,120,60,0.5);
+    box-shadow: inset 0 1px 0 rgba(255,235,200,0.4);
+  }
+  .badge svg { width: 11px; height: 11px; }
+
+  .hearts {
+    display: inline-flex;
+    gap: 3px;
+    color: var(--accent);
+    margin-left: auto;
+  }
+  .hearts svg { width: 16px; height: 16px; fill: currentColor; opacity: 0.92; }
+  .hearts svg.dim { opacity: 0.18; }
 
   .meta {
     display: flex;
@@ -529,7 +549,9 @@
 
 <nav class="topnav">
   <a href="index.html" class="active">Timeline</a>
+  <a href="list.html">List</a>
   <a href="map.html">Map</a>
+  <a href="label.html" style="color: var(--accent); opacity: 0.7;">＋ Label</a>
 </nav>
 
 <nav class="filters" id="filters"></nav>
@@ -578,7 +600,7 @@ themeBtn.addEventListener('click', () => {
 
 /* ------------------ DATA ------------------ */
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const state = { visits: [], cuisineFilter: 'all', cityFilter: 'all' };
+const state = { visits: [], cuisineFilter: 'all', cityFilter: 'all', arrFilter: 'all', musicFilter: 'all' };
 
 function fmtDate(s) {
   const d = new Date(s + 'T00:00:00');
@@ -619,23 +641,37 @@ function parseCSV() {
 /* ------------------ FILTERS ------------------ */
 function buildFilters() {
   const cuisines = [...new Set(state.visits.map(v => (v.cuisine_type || '').trim()).filter(Boolean))].sort();
-  const cities = [...new Set(state.visits.map(v => (v.city || '').trim()).filter(Boolean))].sort();
+  const arrs = [...new Set(state.visits.map(v => (v.arrondissement || '').trim()).filter(Boolean))]
+    .sort((a, b) => {
+      const an = (a.match(/(\d+)/) || [])[1];
+      const bn = (b.match(/(\d+)/) || [])[1];
+      if (an && bn) return parseInt(an) - parseInt(bn);
+      return a.localeCompare(b);
+    });
+  const musics = [...new Set(state.visits.map(v => (v.music_tag || '').trim()).filter(Boolean))].sort();
   const wrap = document.getElementById('filters');
   wrap.innerHTML = '';
 
+  const reset = () => { state.cuisineFilter = 'all'; state.cityFilter = 'all'; state.arrFilter = 'all'; state.musicFilter = 'all'; render(); };
   const allGroup = document.createElement('div');
   allGroup.className = 'filter-group';
-  allGroup.appendChild(makeBtn('All', () => { state.cuisineFilter = 'all'; state.cityFilter = 'all'; render(); }, () => state.cuisineFilter === 'all' && state.cityFilter === 'all'));
+  allGroup.appendChild(makeBtn('All', reset,
+    () => state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all'));
   wrap.appendChild(allGroup);
 
   if (cuisines.length) {
     const g = document.createElement('div'); g.className = 'filter-group';
-    cuisines.forEach(c => g.appendChild(makeBtn(c, () => { state.cuisineFilter = c; render(); }, () => state.cuisineFilter === c)));
+    cuisines.forEach(c => g.appendChild(makeBtn(c, () => { state.cuisineFilter = c; state.arrFilter = 'all'; state.musicFilter = 'all'; render(); }, () => state.cuisineFilter === c)));
     wrap.appendChild(g);
   }
-  if (cities.length) {
+  if (arrs.length) {
     const g = document.createElement('div'); g.className = 'filter-group';
-    cities.forEach(c => g.appendChild(makeBtn(c, () => { state.cityFilter = c; render(); }, () => state.cityFilter === c)));
+    arrs.forEach(c => g.appendChild(makeBtn(c, () => { state.arrFilter = c; state.cuisineFilter = 'all'; state.musicFilter = 'all'; render(); }, () => state.arrFilter === c)));
+    wrap.appendChild(g);
+  }
+  if (musics.length) {
+    const g = document.createElement('div'); g.className = 'filter-group';
+    musics.forEach(c => g.appendChild(makeBtn(c, () => { state.musicFilter = c; state.cuisineFilter = 'all'; state.arrFilter = 'all'; render(); }, () => state.musicFilter === c)));
     wrap.appendChild(g);
   }
 }
@@ -656,8 +692,8 @@ function refreshFilterStates() {
   wrap.querySelectorAll('.filter-btn').forEach(btn => {
     const txt = btn.textContent;
     let active = false;
-    if (txt === 'All') active = state.cuisineFilter === 'all' && state.cityFilter === 'all';
-    else if (state.cuisineFilter === txt || state.cityFilter === txt) active = true;
+    if (txt === 'All') active = state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all';
+    else if ([state.cuisineFilter, state.cityFilter, state.arrFilter, state.musicFilter].includes(txt)) active = true;
     btn.classList.toggle('active', active);
   });
 }
@@ -671,16 +707,19 @@ function render() {
   const filtered = state.visits.filter(v => {
     if (state.cuisineFilter !== 'all' && (v.cuisine_type || '').trim() !== state.cuisineFilter) return false;
     if (state.cityFilter !== 'all' && (v.city || '').trim() !== state.cityFilter) return false;
+    if (state.arrFilter !== 'all' && (v.arrondissement || '').trim() !== state.arrFilter) return false;
+    if (state.musicFilter !== 'all' && (v.music_tag || '').trim() !== state.musicFilter) return false;
     return true;
   });
 
   const countEl = document.getElementById('count');
   const total = state.visits.length;
   const allActive = state.cuisineFilter === 'all' && state.cityFilter === 'all';
-  if (allActive) {
+  const allActive2 = state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all';
+  if (allActive2) {
     countEl.innerHTML = `<strong>${total}</strong> &nbsp; visits in total`;
   } else {
-    const tag = state.cuisineFilter !== 'all' ? state.cuisineFilter : state.cityFilter;
+    const tag = [state.cuisineFilter, state.arrFilter, state.musicFilter, state.cityFilter].find(x => x !== 'all') || '';
     countEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${total} &nbsp; — &nbsp; <em>${tag}</em>`;
   }
 
@@ -731,11 +770,16 @@ function buildEntry(v, side) {
   const name = (v.restaurant_name || '').trim() || 'Untitled visit';
   const cuisine = (v.cuisine_type || '').trim();
   const city = (v.city || '').trim();
+  const arr = (v.arrondissement || '').trim();
   const maps = (v.google_maps_link || '').trim();
   const notes = (v.notes || '').trim();
+  const music = (v.music_tag || '').trim();
+  const michelin = (v.michelin_tag || '').trim();
+  const hearts = parseInt(v.hearts || '0', 10) || 0;
 
   const metaParts = [];
-  if (city) metaParts.push(`<span>${escapeHTML(city)}</span>`);
+  const place = arr || city;
+  if (place) metaParts.push(`<span>${escapeHTML(place)}</span>`);
   metaParts.push(`<span>${escapeHTML(fmtDate(v.visit_date))}</span>`);
   if (maps) {
     metaParts.push(`<a href="${escapeHTML(maps)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="Open in Google Maps">
@@ -745,11 +789,21 @@ function buildEntry(v, side) {
   }
   const metaHTML = metaParts.join('<span class="dot">·</span>');
 
+  const heartIcon = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.5"><path d="M12 21s-7-4.5-9.5-9C.7 8.6 2.7 4.5 6.4 4.5c2 0 3.5 1.1 4.6 2.7C12.1 5.6 13.6 4.5 15.6 4.5c3.7 0 5.7 4.1 3.9 7.5C19 16.5 12 21 12 21z"/></svg>';
+  const heartsHTML = hearts > 0
+    ? `<span class="hearts" title="${hearts}/3 coup de cœur">${[1,2,3].map(i => i <= hearts ? heartIcon : heartIcon.replace('<svg', '<svg class="dim"')).join('')}</span>`
+    : '';
+  const noteIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/></svg>';
+  const starIcon = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.9L22 10l-5.5 5 1.6 7L12 18.3 5.9 22l1.6-7L2 10l7.1-1.1L12 2z"/></svg>';
+
   card.innerHTML = `
     <div class="cover">${coverHTML}${photoCount}</div>
     <h3 class="name">${escapeHTML(name)}</h3>
     <div class="badges-row">
       ${cuisine ? `<span class="badge">${escapeHTML(cuisine)}</span>` : ''}
+      ${music ? `<span class="badge music">${noteIcon}${escapeHTML(music)}</span>` : ''}
+      ${michelin ? `<span class="badge michelin">${starIcon}Michelin · ${escapeHTML(michelin)}</span>` : ''}
+      ${heartsHTML}
     </div>
     <div class="meta">${metaHTML}</div>
     ${notes ? `<div class="notes">${escapeHTML(notes)}</div>` : ''}
