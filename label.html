@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Label Visits — Our Table</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #161412; --surface: #1f1b18; --surface-2: #2a2521;
+    --text: #ede4d8; --muted: #a89c8c;
+    --accent: #9c3d4a; --accent-2: #c8a97e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif; line-height: 1.5;
+    padding-bottom: 100px;
+  }
+  header {
+    padding: 50px 24px 30px; text-align: center;
+    border-bottom: 1px solid rgba(200,169,126,0.2);
+  }
+  header h1 {
+    font-family: 'Cormorant Garamond', serif; font-weight: 500;
+    font-size: 56px; margin: 0; letter-spacing: -0.01em;
+  }
+  header h1 em { color: var(--accent); font-style: italic; }
+  header p { color: var(--muted); font-style: italic; font-family: 'Cormorant Garamond', serif; font-size: 19px; margin: 10px 0 0; }
+  header .actions { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    background: var(--accent); color: #f5e9d8;
+    border: none; padding: 11px 22px;
+    font-family: 'DM Sans', sans-serif; font-size: 12px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    cursor: pointer; border-radius: 999px; font-weight: 500;
+    transition: all 0.25s;
+  }
+  .btn:hover { background: #b14855; transform: translateY(-1px); }
+  .btn.secondary { background: transparent; color: var(--accent-2); border: 1px solid var(--accent-2); }
+  .btn.secondary:hover { background: rgba(200,169,126,0.12); }
+  .btn.gold { background: var(--accent-2); color: #1a1512; }
+  .btn.gold:hover { background: #d8b98c; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 30px 24px; }
+  .visit {
+    background: var(--surface); border: 1px solid rgba(200,169,126,0.1);
+    border-radius: 4px; margin-bottom: 30px; padding: 24px;
+    display: grid; grid-template-columns: minmax(280px, 1fr) 1.3fr;
+    gap: 24px;
+  }
+  @media (max-width: 800px) {
+    .visit { grid-template-columns: 1fr; }
+  }
+  .visit-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 6px;
+    align-content: start;
+  }
+  .visit-photos img {
+    width: 100%; aspect-ratio: 1; object-fit: cover;
+    border-radius: 2px; cursor: pointer;
+    transition: transform 0.25s;
+    background: var(--surface-2);
+  }
+  .visit-photos img:hover { transform: scale(1.04); }
+  .visit-photos img.cover {
+    grid-column: span 2; grid-row: span 2;
+    box-shadow: 0 0 0 2px var(--accent-2);
+  }
+
+  .visit-meta { display: flex; flex-direction: column; gap: 12px; }
+  .visit-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .visit-date {
+    font-family: 'Cormorant Garamond', serif; font-size: 26px;
+    color: var(--accent-2); font-style: italic;
+  }
+  .visit-num { color: var(--muted); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .field input, .field textarea {
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid rgba(200,169,126,0.15);
+    padding: 10px 12px; font-family: inherit; font-size: 14px;
+    border-radius: 3px; transition: border-color 0.2s;
+  }
+  .field input:focus, .field textarea:focus {
+    outline: none; border-color: var(--accent-2);
+  }
+  .field textarea { resize: vertical; min-height: 60px; font-style: italic; font-family: 'Cormorant Garamond', serif; font-size: 16px; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .row-2 { grid-template-columns: 1fr; } }
+
+  .save-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(22,20,18,0.95);
+    border-top: 1px solid rgba(200,169,126,0.25);
+    padding: 16px 24px; display: flex; justify-content: center; gap: 12px;
+    backdrop-filter: blur(12px); z-index: 50;
+    align-items: center;
+  }
+  .save-bar .status { color: var(--muted); font-size: 13px; font-style: italic; font-family: 'Cormorant Garamond', serif; }
+
+  /* Lightbox */
+  .lightbox { position: fixed; inset: 0; background: rgba(8,6,5,0.95); display: none; align-items: center; justify-content: center; z-index: 200; backdrop-filter: blur(10px); }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 92vw; max-height: 90vh; object-fit: contain; }
+  .lightbox button {
+    position: absolute; top: 24px; right: 24px;
+    background: rgba(31,27,24,0.7); color: var(--accent-2);
+    border: 1px solid var(--accent-2); width: 44px; height: 44px;
+    border-radius: 50%; cursor: pointer; font-size: 20px;
+  }
+  .cover-pick { font-size: 11px; color: var(--accent-2); cursor: pointer; user-select: none; }
+  .cover-pick:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Label your <em>visits</em></h1>
+  <p>Click photos to view full-size. Fill in the fields, then download the updated CSV.</p>
+  <div class="actions">
+    <button class="btn gold" onclick="downloadCSV()">Download updated CSV</button>
+    <a href="index.html" class="btn secondary" style="text-decoration:none;">View site</a>
+  </div>
+</header>
+
+<main class="container" id="container">
+  <p style="text-align:center; color:var(--muted); font-style:italic;">Loading…</p>
+</main>
+
+<div class="save-bar">
+  <span class="status" id="status">Edits stay in your browser. Click "Download" to save the CSV.</span>
+  <button class="btn gold" onclick="downloadCSV()">Download CSV</button>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="this.classList.remove('open')">
+  <img id="lbImg" />
+  <button onclick="event.stopPropagation(); document.getElementById('lightbox').classList.remove('open')">×</button>
+</div>
+
+<script>
+const LS_KEY = 'our-table-edits';
+let rows = [];
+let header = ['visit_date','restaurant_name','cuisine_type','city','google_maps_link','notes','photo_files','cover_photo'];
+
+function loadEdits() { try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; } }
+function saveEdits(e) { try { localStorage.setItem(LS_KEY, JSON.stringify(e)); } catch {} }
+
+Papa.parse('restaurant_claude.csv', {
+  download: true, header: true, skipEmptyLines: true,
+  complete: (res) => {
+    rows = res.data.filter(r => r.visit_date);
+    rows.sort((a,b) => a.visit_date < b.visit_date ? -1 : 1);
+    const edits = loadEdits();
+    rows.forEach((r, i) => {
+      const e = edits[r.visit_date + '_' + i];
+      if (e) Object.assign(r, e);
+    });
+    render();
+  },
+});
+
+function fmtDate(s) {
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+}
+
+function render() {
+  const c = document.getElementById('container');
+  c.innerHTML = '';
+  rows.forEach((r, i) => c.appendChild(buildVisit(r, i)));
+}
+
+function buildVisit(r, idx) {
+  const photos = (r.photo_files || '').split('|').filter(Boolean);
+  const wrap = document.createElement('section');
+  wrap.className = 'visit';
+
+  const photosWrap = document.createElement('div');
+  photosWrap.className = 'visit-photos';
+  photos.forEach((p) => {
+    const img = document.createElement('img');
+    img.src = encodeURI(p);
+    img.loading = 'lazy';
+    img.title = p.split('/').pop();
+    if (p === r.cover_photo) img.classList.add('cover');
+    img.addEventListener('click', () => {
+      document.getElementById('lbImg').src = encodeURI(p);
+      document.getElementById('lightbox').classList.add('open');
+    });
+    img.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      r.cover_photo = p;
+      persist(r, idx);
+      render();
+    });
+    photosWrap.appendChild(img);
+  });
+
+  const meta = document.createElement('div');
+  meta.className = 'visit-meta';
+  meta.innerHTML = `
+    <div class="visit-header">
+      <div>
+        <div class="visit-date">${fmtDate(r.visit_date)}</div>
+        <div class="cover-pick" title="Double-click any photo to set cover">cover: ${(r.cover_photo || '').split('/').pop() || '—'}</div>
+      </div>
+      <div class="visit-num">Visit ${idx+1} of ${rows.length} · ${photos.length} photos</div>
+    </div>
+    <div class="field">
+      <label>Restaurant name</label>
+      <input data-k="restaurant_name" value="${esc(r.restaurant_name)}" placeholder="e.g. Le Servan" />
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Cuisine</label>
+        <input data-k="cuisine_type" value="${esc(r.cuisine_type)}" placeholder="French, Japanese…" />
+      </div>
+      <div class="field">
+        <label>City</label>
+        <input data-k="city" value="${esc(r.city)}" placeholder="Paris" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Google Maps link</label>
+      <input data-k="google_maps_link" value="${esc(r.google_maps_link)}" placeholder="https://maps.google.com/…" />
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea data-k="notes" placeholder="What did you eat? What did you love?">${esc(r.notes)}</textarea>
+    </div>
+  `;
+  meta.querySelectorAll('[data-k]').forEach(el => {
+    el.addEventListener('input', () => {
+      r[el.dataset.k] = el.value;
+      persist(r, idx);
+    });
+  });
+
+  wrap.appendChild(photosWrap);
+  wrap.appendChild(meta);
+  return wrap;
+}
+
+function esc(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+function persist(r, idx) {
+  const edits = loadEdits();
+  edits[r.visit_date + '_' + idx] = {
+    restaurant_name: r.restaurant_name || '',
+    cuisine_type: r.cuisine_type || '',
+    city: r.city || '',
+    google_maps_link: r.google_maps_link || '',
+    notes: r.notes || '',
+    cover_photo: r.cover_photo || '',
+  };
+  saveEdits(edits);
+  flashStatus('Saved to browser ✓');
+}
+
+let flashTO;
+function flashStatus(t) {
+  const s = document.getElementById('status');
+  s.textContent = t;
+  clearTimeout(flashTO);
+  flashTO = setTimeout(() => {
+    s.textContent = 'Edits stay in your browser. Click "Download" to save the CSV.';
+  }, 1800);
+}
+
+function downloadCSV() {
+  const csv = Papa.unparse(rows.map(r => {
+    const o = {}; header.forEach(k => o[k] = r[k] || ''); return o;
+  }), { columns: header });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'restaurant_claude.csv';
+  a.click();
+  flashStatus('Downloaded — replace the file in your folder');
+}
+</script>
+</body>
+</html>

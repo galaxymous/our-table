@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Our Table — A record of good meals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+  :root {
+    --bg: #161412;
+    --surface: #1f1b18;
+    --surface-2: #2a2521;
+    --text: #ede4d8;
+    --muted: #a89c8c;
+    --accent: #9c3d4a;
+    --accent-2: #c8a97e;
+    --shadow: 0 24px 60px rgba(0,0,0,0.55), 0 8px 16px rgba(0,0,0,0.35);
+    --grain-opacity: 0.05;
+  }
+  [data-theme="light"] {
+    --bg: #f5f0ea;
+    --surface: #ffffff;
+    --surface-2: #f1ebe2;
+    --text: #1a1512;
+    --muted: #6b5f52;
+    --accent: #9c3d4a;
+    --accent-2: #c8a97e;
+    --shadow: 0 24px 50px rgba(60,40,20,0.18), 0 6px 14px rgba(60,40,20,0.10);
+    --grain-opacity: 0.07;
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.55;
+    transition: background 0.5s ease, color 0.5s ease;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='1'/></svg>");
+    opacity: var(--grain-opacity);
+    mix-blend-mode: overlay;
+  }
+
+  /* Theme toggle */
+  .theme-toggle {
+    position: fixed;
+    top: 22px;
+    right: 22px;
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid var(--accent-2);
+    background: var(--surface);
+    color: var(--accent-2);
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: transform 0.4s ease, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+    backdrop-filter: blur(8px);
+  }
+  .theme-toggle:hover { transform: rotate(20deg) scale(1.05); }
+  .theme-toggle svg { width: 20px; height: 20px; }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    z-index: 2;
+    padding: 110px 24px 60px;
+    text-align: center;
+  }
+  .hero .ornament {
+    color: var(--accent-2);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    letter-spacing: 0.6em;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 500;
+    font-size: clamp(58px, 11vw, 132px);
+    margin: 0;
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .hero .subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: clamp(18px, 2.4vw, 24px);
+    color: var(--muted);
+    margin-top: 18px;
+    letter-spacing: 0.04em;
+  }
+  .hero .rule {
+    width: 80px;
+    height: 1px;
+    background: var(--accent-2);
+    margin: 36px auto 0;
+    opacity: 0.6;
+  }
+
+  /* Top nav */
+  .topnav {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 24px 14px;
+  }
+  .topnav a {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 8px 18px;
+    border-bottom: 1px solid transparent;
+    transition: color 0.25s, border-color 0.25s;
+  }
+  .topnav a:hover { color: var(--text); }
+  .topnav a.active { color: var(--accent-2); border-color: var(--accent-2); }
+
+  /* Filters */
+  .filters {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 10px;
+    padding: 20px 24px 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .count {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    color: var(--muted);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 17px;
+    letter-spacing: 0.06em;
+    padding: 0 24px 40px;
+  }
+  .count strong { color: var(--accent); font-style: normal; font-weight: 500; font-family: 'DM Sans', sans-serif; font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; }
+  .filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+  }
+  .filter-group + .filter-group::before {
+    content: "";
+    width: 1px;
+    background: var(--accent-2);
+    opacity: 0.3;
+    margin: 4px 6px;
+  }
+  .filter-btn {
+    appearance: none;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--accent-2);
+    padding: 7px 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .filter-btn:hover { background: rgba(200,169,126,0.12); }
+  .filter-btn.active {
+    background: var(--accent-2);
+    color: #1a1512;
+    border-color: var(--accent-2);
+  }
+
+  /* Timeline */
+  .timeline {
+    position: relative;
+    z-index: 2;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 20px 24px 120px;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom,
+      transparent 0%,
+      rgba(200,169,126,0.3) 8%,
+      rgba(200,169,126,0.3) 92%,
+      transparent 100%);
+    transform: translateX(-0.5px);
+  }
+  @media (max-width: 800px) {
+    .timeline::before { left: 24px; }
+  }
+
+  .month-divider {
+    position: relative;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin: 60px auto 40px;
+    text-align: center;
+  }
+  .month-divider .line {
+    flex: 1;
+    height: 1px;
+    background: var(--accent-2);
+    opacity: 0.55;
+  }
+  .month-divider .label {
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--accent-2);
+    font-size: 22px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    font-style: italic;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  .entry {
+    position: relative;
+    width: 50%;
+    padding: 28px 56px;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+  .entry.visible { opacity: 1; transform: translateY(0); }
+  .entry.left { margin-left: 0; }
+  .entry.right { margin-left: 50%; }
+
+  .entry::before {
+    content: "";
+    position: absolute;
+    top: 60px;
+    width: 11px;
+    height: 11px;
+    background: var(--accent);
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px var(--accent-2);
+    z-index: 4;
+  }
+  .entry.left::before { right: -6px; }
+  .entry.right::before { left: -6px; }
+
+  @media (max-width: 800px) {
+    .entry { width: 100%; padding: 18px 0 18px 60px; }
+    .entry.right { margin-left: 0; }
+    .entry::before, .entry.left::before, .entry.right::before {
+      left: 18px;
+      right: auto;
+    }
+  }
+
+  .card {
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 22px;
+    box-shadow: var(--shadow);
+    transform: rotate(-1.5deg);
+    transition: transform 0.45s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.45s ease;
+    cursor: pointer;
+    border: 1px solid rgba(200,169,126,0.08);
+    position: relative;
+  }
+  .entry.right .card { transform: rotate(1.5deg); }
+  .card:hover {
+    transform: rotate(0deg) scale(1.025);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(200,169,126,0.25);
+  }
+  [data-theme="light"] .card:hover {
+    box-shadow: 0 30px 70px rgba(60,40,20,0.25), 0 0 0 1px rgba(200,169,126,0.5);
+  }
+
+  .cover {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    background: var(--surface-2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.7s ease;
+  }
+  .card:hover .cover img { transform: scale(1.04); }
+  .cover .photo-count {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(22,20,18,0.8);
+    color: var(--accent-2);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    padding: 5px 10px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(200,169,126,0.4);
+  }
+  .cover .placeholder {
+    width: 100%; height: 100%;
+    display: grid; place-items: center;
+    color: var(--muted);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 18px;
+  }
+
+  .card .name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1.05;
+    margin: 6px 0 10px;
+    color: var(--text);
+  }
+  .card .name em { font-style: italic; color: var(--accent); }
+
+  .badges-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .badge {
+    background: var(--accent);
+    color: #f5e9d8;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-weight: 500;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+  }
+  .meta .dot { opacity: 0.5; }
+  .meta a {
+    color: var(--accent-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .meta a:hover { color: var(--accent); }
+  .meta a svg { width: 14px; height: 14px; }
+
+  .notes {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--text);
+    opacity: 0.88;
+    border-left: 2px solid var(--accent-2);
+    padding-left: 14px;
+    margin-top: 8px;
+  }
+
+  /* Empty state */
+  .empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 22px;
+  }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(8,6,5,0.94);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(16px);
+    animation: fadein 0.3s ease;
+  }
+  .lightbox.open { display: flex; }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+  .lightbox .stage {
+    position: relative;
+    max-width: min(94vw, 1200px);
+    max-height: 88vh;
+    width: 100%;
+    height: 88vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 30px 100px rgba(0,0,0,0.7);
+    border-radius: 2px;
+  }
+  .lightbox .close, .lightbox .nav {
+    position: absolute;
+    background: rgba(31,27,24,0.65);
+    color: var(--accent-2);
+    border: 1px solid rgba(200,169,126,0.4);
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: background 0.2s, transform 0.2s;
+    backdrop-filter: blur(8px);
+  }
+  .lightbox .close:hover, .lightbox .nav:hover {
+    background: var(--accent);
+    color: #f5e9d8;
+    transform: scale(1.06);
+  }
+  .lightbox .close { top: 24px; right: 24px; }
+  .lightbox .nav.prev { left: -60px; }
+  .lightbox .nav.next { right: -60px; }
+  .lightbox .nav svg, .lightbox .close svg { width: 20px; height: 20px; }
+  .lightbox .caption {
+    position: absolute;
+    bottom: -40px;
+    left: 0; right: 0;
+    text-align: center;
+    color: var(--muted);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 16px;
+    letter-spacing: 0.1em;
+  }
+  @media (max-width: 800px) {
+    .lightbox .nav.prev { left: 8px; }
+    .lightbox .nav.next { right: 8px; }
+    .lightbox .close { top: 12px; right: 12px; }
+  }
+
+  footer {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    color: var(--muted);
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 15px;
+    padding: 30px 20px 50px;
+    letter-spacing: 0.1em;
+  }
+  footer .rule {
+    width: 60px;
+    height: 1px;
+    background: var(--accent-2);
+    margin: 0 auto 18px;
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+  <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+  </svg>
+</button>
+
+<header class="hero">
+  <div class="ornament">— Chapter One —</div>
+  <h1>Our <em>Table</em></h1>
+  <div class="subtitle">A record of good meals</div>
+  <div class="rule"></div>
+</header>
+
+<nav class="topnav">
+  <a href="index.html" class="active">Timeline</a>
+  <a href="map.html">Map</a>
+</nav>
+
+<nav class="filters" id="filters"></nav>
+<div class="count" id="count"></div>
+
+<main class="timeline" id="timeline">
+  <div class="empty" id="loading">Setting the table…</div>
+</main>
+
+<footer>
+  <div class="rule"></div>
+  Bon appétit
+</footer>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+  <button class="close" id="lbClose" aria-label="Close">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  </button>
+  <div class="stage">
+    <button class="nav prev" id="lbPrev" aria-label="Previous">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <img id="lbImg" alt="" />
+    <button class="nav next" id="lbNext" aria-label="Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+    <div class="caption" id="lbCaption"></div>
+  </div>
+</div>
+
+<script>
+/* ------------------ THEME ------------------ */
+const themeBtn = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+const SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
+const MOON = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+function applyTheme(t) {
+  document.body.setAttribute('data-theme', t);
+  themeIcon.innerHTML = t === 'dark' ? MOON : SUN;
+  try { localStorage.setItem('our-table-theme', t); } catch(e) {}
+}
+applyTheme((() => { try { return localStorage.getItem('our-table-theme') || 'light'; } catch(e) { return 'light'; }})());
+themeBtn.addEventListener('click', () => {
+  applyTheme(document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+/* ------------------ DATA ------------------ */
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const state = { visits: [], cuisineFilter: 'all', cityFilter: 'all' };
+
+function fmtDate(s) {
+  const d = new Date(s + 'T00:00:00');
+  if (isNaN(d)) return s;
+  return d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+}
+function monthKey(s) {
+  const d = new Date(s + 'T00:00:00');
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function monthLabel(s) {
+  const d = new Date(s + 'T00:00:00');
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function parseCSV() {
+  Papa.parse('restaurant_claude.csv', {
+    download: true,
+    header: true,
+    skipEmptyLines: true,
+    complete: (res) => {
+      const rows = (res.data || []).filter(r => r.visit_date && r.photo_files);
+      rows.sort((a,b) => (a.visit_date < b.visit_date ? 1 : -1));
+      state.visits = rows.map(r => ({
+        ...r,
+        photos: (r.photo_files || '').split('|').map(s => s.trim()).filter(Boolean),
+      }));
+      buildFilters();
+      render();
+    },
+    error: (err) => {
+      document.getElementById('loading').textContent = 'Could not load restaurant_claude.csv';
+      console.error(err);
+    },
+  });
+}
+
+/* ------------------ FILTERS ------------------ */
+function buildFilters() {
+  const cuisines = [...new Set(state.visits.map(v => (v.cuisine_type || '').trim()).filter(Boolean))].sort();
+  const cities = [...new Set(state.visits.map(v => (v.city || '').trim()).filter(Boolean))].sort();
+  const wrap = document.getElementById('filters');
+  wrap.innerHTML = '';
+
+  const allGroup = document.createElement('div');
+  allGroup.className = 'filter-group';
+  allGroup.appendChild(makeBtn('All', () => { state.cuisineFilter = 'all'; state.cityFilter = 'all'; render(); }, () => state.cuisineFilter === 'all' && state.cityFilter === 'all'));
+  wrap.appendChild(allGroup);
+
+  if (cuisines.length) {
+    const g = document.createElement('div'); g.className = 'filter-group';
+    cuisines.forEach(c => g.appendChild(makeBtn(c, () => { state.cuisineFilter = c; render(); }, () => state.cuisineFilter === c)));
+    wrap.appendChild(g);
+  }
+  if (cities.length) {
+    const g = document.createElement('div'); g.className = 'filter-group';
+    cities.forEach(c => g.appendChild(makeBtn(c, () => { state.cityFilter = c; render(); }, () => state.cityFilter === c)));
+    wrap.appendChild(g);
+  }
+}
+function makeBtn(label, onClick, isActive) {
+  const b = document.createElement('button');
+  b.className = 'filter-btn';
+  b.textContent = label;
+  b.dataset.isActive = isActive;
+  b.addEventListener('click', onClick);
+  return b;
+}
+function refreshFilterStates() {
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    const fn = btn.dataset.isActive;
+  });
+  // re-render filters to update active class (simpler & safe)
+  const wrap = document.getElementById('filters');
+  wrap.querySelectorAll('.filter-btn').forEach(btn => {
+    const txt = btn.textContent;
+    let active = false;
+    if (txt === 'All') active = state.cuisineFilter === 'all' && state.cityFilter === 'all';
+    else if (state.cuisineFilter === txt || state.cityFilter === txt) active = true;
+    btn.classList.toggle('active', active);
+  });
+}
+
+/* ------------------ RENDER ------------------ */
+function render() {
+  refreshFilterStates();
+  const tl = document.getElementById('timeline');
+  tl.innerHTML = '';
+
+  const filtered = state.visits.filter(v => {
+    if (state.cuisineFilter !== 'all' && (v.cuisine_type || '').trim() !== state.cuisineFilter) return false;
+    if (state.cityFilter !== 'all' && (v.city || '').trim() !== state.cityFilter) return false;
+    return true;
+  });
+
+  const countEl = document.getElementById('count');
+  const total = state.visits.length;
+  const allActive = state.cuisineFilter === 'all' && state.cityFilter === 'all';
+  if (allActive) {
+    countEl.innerHTML = `<strong>${total}</strong> &nbsp; visits in total`;
+  } else {
+    const tag = state.cuisineFilter !== 'all' ? state.cuisineFilter : state.cityFilter;
+    countEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${total} &nbsp; — &nbsp; <em>${tag}</em>`;
+  }
+
+  if (!filtered.length) {
+    tl.innerHTML = '<div class="empty">No visits match these filters.</div>';
+    return;
+  }
+
+  let lastMonth = null;
+  let position = 0;
+  filtered.forEach((v) => {
+    const mk = monthKey(v.visit_date);
+    if (mk !== lastMonth) {
+      lastMonth = mk;
+      const div = document.createElement('div');
+      div.className = 'month-divider';
+      div.innerHTML = `<div class="line"></div><div class="label">${monthLabel(v.visit_date)}</div><div class="line"></div>`;
+      tl.appendChild(div);
+      position = 0;
+    }
+    const side = position % 2 === 0 ? 'left' : 'right';
+    position++;
+    tl.appendChild(buildEntry(v, side));
+  });
+
+  observeFadeIns();
+}
+
+function escapeHTML(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function buildEntry(v, side) {
+  const wrap = document.createElement('div');
+  wrap.className = `entry ${side}`;
+  const card = document.createElement('article');
+  card.className = 'card';
+
+  const cover = v.cover_photo && v.cover_photo.trim() ? v.cover_photo.trim() : v.photos[0];
+  const coverHTML = cover
+    ? `<img src="${encodeURI(cover)}" alt="${escapeHTML(v.restaurant_name || 'restaurant')}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'placeholder',innerHTML:'image unavailable'}));" />`
+    : `<div class="placeholder">no photo</div>`;
+
+  const photoCount = v.photos.length > 1
+    ? `<div class="photo-count">${v.photos.length} photos</div>`
+    : '';
+
+  const name = (v.restaurant_name || '').trim() || 'Untitled visit';
+  const cuisine = (v.cuisine_type || '').trim();
+  const city = (v.city || '').trim();
+  const maps = (v.google_maps_link || '').trim();
+  const notes = (v.notes || '').trim();
+
+  const metaParts = [];
+  if (city) metaParts.push(`<span>${escapeHTML(city)}</span>`);
+  metaParts.push(`<span>${escapeHTML(fmtDate(v.visit_date))}</span>`);
+  if (maps) {
+    metaParts.push(`<a href="${escapeHTML(maps)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" aria-label="Open in Google Maps">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span>Map</span>
+    </a>`);
+  }
+  const metaHTML = metaParts.join('<span class="dot">·</span>');
+
+  card.innerHTML = `
+    <div class="cover">${coverHTML}${photoCount}</div>
+    <h3 class="name">${escapeHTML(name)}</h3>
+    <div class="badges-row">
+      ${cuisine ? `<span class="badge">${escapeHTML(cuisine)}</span>` : ''}
+    </div>
+    <div class="meta">${metaHTML}</div>
+    ${notes ? `<div class="notes">${escapeHTML(notes)}</div>` : ''}
+  `;
+
+  card.addEventListener('click', () => openLightbox(v, 0));
+  wrap.appendChild(card);
+  return wrap;
+}
+
+/* ------------------ FADE-IN ------------------ */
+let io;
+function observeFadeIns() {
+  if (io) io.disconnect();
+  io = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        const idx = Array.from(document.querySelectorAll('.entry')).indexOf(e.target);
+        e.target.style.transitionDelay = `${Math.min(idx, 6) * 80}ms`;
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.entry').forEach(el => io.observe(el));
+}
+
+/* ------------------ LIGHTBOX ------------------ */
+const lb = document.getElementById('lightbox');
+const lbImg = document.getElementById('lbImg');
+const lbCaption = document.getElementById('lbCaption');
+let lbState = { photos: [], i: 0, name: '' };
+
+function openLightbox(visit, i) {
+  lbState.photos = visit.photos;
+  lbState.name = visit.restaurant_name || '';
+  lbState.i = i || 0;
+  lb.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  showLB();
+}
+function closeLightbox() {
+  lb.classList.remove('open');
+  document.body.style.overflow = '';
+}
+function showLB() {
+  if (!lbState.photos.length) return;
+  const src = lbState.photos[lbState.i];
+  lbImg.src = encodeURI(src);
+  lbImg.alt = lbState.name;
+  lbCaption.textContent = `${lbState.name ? lbState.name + ' — ' : ''}${lbState.i + 1} / ${lbState.photos.length}`;
+}
+function navLB(d) {
+  if (!lbState.photos.length) return;
+  lbState.i = (lbState.i + d + lbState.photos.length) % lbState.photos.length;
+  showLB();
+}
+document.getElementById('lbClose').addEventListener('click', closeLightbox);
+document.getElementById('lbPrev').addEventListener('click', () => navLB(-1));
+document.getElementById('lbNext').addEventListener('click', () => navLB(1));
+lb.addEventListener('click', (e) => { if (e.target === lb) closeLightbox(); });
+document.addEventListener('keydown', (e) => {
+  if (!lb.classList.contains('open')) return;
+  if (e.key === 'Escape') closeLightbox();
+  else if (e.key === 'ArrowLeft') navLB(-1);
+  else if (e.key === 'ArrowRight') navLB(1);
+});
+let touchX = null;
+lb.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+lb.addEventListener('touchend', (e) => {
+  if (touchX == null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 50) navLB(dx < 0 ? 1 : -1);
+  touchX = null;
+}, { passive: true });
+
+/* ------------------ GO ------------------ */
+parseCSV();
+</script>
+</body>
+</html>
