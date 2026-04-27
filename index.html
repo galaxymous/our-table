@@ -148,12 +148,33 @@
     position: relative;
     z-index: 2;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px 10px;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
     padding: 20px 24px 16px;
     max-width: 1100px;
     margin: 0 auto;
+  }
+  .filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .filter-label {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    color: var(--accent-2);
+    font-size: 14px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-right: 6px;
+    min-width: 70px;
+    text-align: right;
+  }
+  @media (max-width: 600px) {
+    .filter-label { min-width: 0; width: 100%; text-align: center; margin-right: 0; }
   }
   .count {
     position: relative;
@@ -170,15 +191,9 @@
   .filter-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
-  }
-  .filter-group + .filter-group::before {
-    content: "";
-    width: 1px;
-    background: var(--accent-2);
-    opacity: 0.3;
-    margin: 4px 6px;
+    align-items: center;
   }
   .filter-btn {
     appearance: none;
@@ -600,7 +615,7 @@ themeBtn.addEventListener('click', () => {
 
 /* ------------------ DATA ------------------ */
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const state = { visits: [], cuisineFilter: 'all', cityFilter: 'all', arrFilter: 'all', musicFilter: 'all' };
+const state = { visits: [], cuisineFilter: 'all', cityFilter: 'all', arrFilter: 'all', musicFilter: 'all', heartFilter: 'all' };
 
 function fmtDate(s) {
   const d = new Date(s + 'T00:00:00');
@@ -641,34 +656,68 @@ function parseCSV() {
 /* ------------------ FILTERS ------------------ */
 function buildFilters() {
   const cuisines = [...new Set(state.visits.map(v => (v.cuisine_type || '').trim()).filter(Boolean))].sort();
-  const arrs = [...new Set(state.visits.map(v => (v.arrondissement || '').trim()).filter(Boolean))]
-    .sort((a, b) => {
-      const an = (a.match(/(\d+)/) || [])[1];
-      const bn = (b.match(/(\d+)/) || [])[1];
-      if (an && bn) return parseInt(an) - parseInt(bn);
-      return a.localeCompare(b);
-    });
   const musics = [...new Set(state.visits.map(v => (v.music_tag || '').trim()).filter(Boolean))].sort();
   const wrap = document.getElementById('filters');
   wrap.innerHTML = '';
 
-  const reset = () => { state.cuisineFilter = 'all'; state.cityFilter = 'all'; state.arrFilter = 'all'; state.musicFilter = 'all'; render(); };
-  const allGroup = document.createElement('div');
-  allGroup.className = 'filter-group';
-  allGroup.appendChild(makeBtn('All', reset,
-    () => state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all'));
-  wrap.appendChild(allGroup);
+  const reset = () => { state.cuisineFilter = 'all'; state.cityFilter = 'all'; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render(); };
 
+  // Top "All" row, centered on its own line
+  const topRow = document.createElement('div');
+  topRow.className = 'filter-row';
+  topRow.appendChild(makeBtn('All', reset,
+    () => state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all' && state.heartFilter === 'all'));
+  wrap.appendChild(topRow);
+
+  // Cuisine row
   if (cuisines.length) {
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.innerHTML = '<span class="filter-label">Cuisine</span>';
     const g = document.createElement('div'); g.className = 'filter-group';
-    cuisines.forEach(c => g.appendChild(makeBtn(c, () => { state.cuisineFilter = c; state.arrFilter = 'all'; state.musicFilter = 'all'; render(); }, () => state.cuisineFilter === c)));
-    wrap.appendChild(g);
+    cuisines.forEach(c => g.appendChild(makeBtn(c, () => { state.cuisineFilter = c; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render(); }, () => state.cuisineFilter === c)));
+    row.appendChild(g);
+    wrap.appendChild(row);
   }
-  // Arrondissement chips are only on the Map page (this list is too long here).
+
+  // Music row
   if (musics.length) {
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.innerHTML = '<span class="filter-label">Music</span>';
     const g = document.createElement('div'); g.className = 'filter-group';
-    musics.forEach(c => g.appendChild(makeBtn(c, () => { state.musicFilter = c; state.cuisineFilter = 'all'; state.arrFilter = 'all'; render(); }, () => state.musicFilter === c)));
-    wrap.appendChild(g);
+    musics.forEach(c => g.appendChild(makeBtn(c, () => { state.musicFilter = c; state.cuisineFilter = 'all'; state.arrFilter = 'all'; state.heartFilter = 'all'; render(); }, () => state.musicFilter === c)));
+    row.appendChild(g);
+    wrap.appendChild(row);
+  }
+
+  // Rating row (hearts)
+  const hasHearts = state.visits.some(v => (parseInt(v.hearts || '0', 10) || 0) > 0);
+  if (hasHearts) {
+    const row = document.createElement('div');
+    row.className = 'filter-row';
+    row.innerHTML = '<span class="filter-label">Rating</span>';
+    const g = document.createElement('div'); g.className = 'filter-group';
+    const HEART_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;vertical-align:-1px;margin-left:2px;"><path d="M12 21s-7-4.5-9.5-9C.7 8.6 2.7 4.5 6.4 4.5c2 0 3.5 1.1 4.6 2.7C12.1 5.6 13.6 4.5 15.6 4.5c3.7 0 5.7 4.1 3.9 7.5C19 16.5 12 21 12 21z"/></svg>';
+    const heartLabels = [
+      ['1+', '1+' + HEART_SVG],
+      ['2+', '2' + HEART_SVG + HEART_SVG],
+      ['3', '3' + HEART_SVG + HEART_SVG + HEART_SVG],
+    ];
+    heartLabels.forEach(([key, label]) => {
+      const b = document.createElement('button');
+      b.className = 'filter-btn';
+      b.dataset.heartKey = key;
+      b.innerHTML = label;
+      b.addEventListener('click', () => {
+        state.heartFilter = key;
+        state.cuisineFilter = 'all'; state.arrFilter = 'all'; state.musicFilter = 'all';
+        render();
+      });
+      g.appendChild(b);
+    });
+    row.appendChild(g);
+    wrap.appendChild(row);
   }
 }
 function makeBtn(label, onClick, isActive) {
@@ -687,8 +736,10 @@ function refreshFilterStates() {
   const wrap = document.getElementById('filters');
   wrap.querySelectorAll('.filter-btn').forEach(btn => {
     const txt = btn.textContent;
+    const heartKey = btn.dataset.heartKey;
     let active = false;
-    if (txt === 'All') active = state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all';
+    if (txt === 'All') active = state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all' && state.heartFilter === 'all';
+    else if (heartKey) active = state.heartFilter === heartKey;
     else if ([state.cuisineFilter, state.cityFilter, state.arrFilter, state.musicFilter].includes(txt)) active = true;
     btn.classList.toggle('active', active);
   });
@@ -705,17 +756,26 @@ function render() {
     if (state.cityFilter !== 'all' && (v.city || '').trim() !== state.cityFilter) return false;
     if (state.arrFilter !== 'all' && (v.arrondissement || '').trim() !== state.arrFilter) return false;
     if (state.musicFilter !== 'all' && (v.music_tag || '').trim() !== state.musicFilter) return false;
+    if (state.heartFilter !== 'all') {
+      const h = parseInt(v.hearts || '0', 10) || 0;
+      const min = parseInt(state.heartFilter, 10);
+      if (state.heartFilter === '3') { if (h !== 3) return false; }
+      else if (h < min) return false;
+    }
     return true;
   });
 
   const countEl = document.getElementById('count');
   const total = state.visits.length;
   const allActive = state.cuisineFilter === 'all' && state.cityFilter === 'all';
-  const allActive2 = state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all';
+  const allActive2 = state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all' && state.heartFilter === 'all';
   if (allActive2) {
     countEl.innerHTML = `<strong>${total}</strong> &nbsp; visits in total`;
   } else {
-    const tag = [state.cuisineFilter, state.arrFilter, state.musicFilter, state.cityFilter].find(x => x !== 'all') || '';
+    let tag = [state.cuisineFilter, state.arrFilter, state.musicFilter, state.cityFilter].find(x => x !== 'all') || '';
+    if (state.heartFilter !== 'all') {
+      tag = state.heartFilter === '3' ? '3 hearts' : state.heartFilter + ' hearts';
+    }
     countEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${total} &nbsp; — &nbsp; <em>${tag}</em>`;
   }
 
