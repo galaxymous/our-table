@@ -352,7 +352,7 @@ function buildControls() {
   const allBtn = mkBtn('All', () => { state.filter = 'all'; render(); });
   wrap.appendChild(allBtn);
   cuisines.forEach(c => wrap.appendChild(mkBtn(c, () => { state.filter = 'cuisine:' + c; render(); })));
-  arrs.forEach(c => wrap.appendChild(mkBtn(c, () => { state.filter = 'arr:' + c; render(); })));
+  // Arrondissement chips are intentionally hidden here (available on the Map page).
 }
 function mkBtn(label, fn) {
   const b = document.createElement('button');

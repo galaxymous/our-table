@@ -664,11 +664,7 @@ function buildFilters() {
     cuisines.forEach(c => g.appendChild(makeBtn(c, () => { state.cuisineFilter = c; state.arrFilter = 'all'; state.musicFilter = 'all'; render(); }, () => state.cuisineFilter === c)));
     wrap.appendChild(g);
   }
-  if (arrs.length) {
-    const g = document.createElement('div'); g.className = 'filter-group';
-    arrs.forEach(c => g.appendChild(makeBtn(c, () => { state.arrFilter = c; state.cuisineFilter = 'all'; state.musicFilter = 'all'; render(); }, () => state.arrFilter === c)));
-    wrap.appendChild(g);
-  }
+  // Arrondissement chips are only on the Map page (this list is too long here).
   if (musics.length) {
     const g = document.createElement('div'); g.className = 'filter-group';
     musics.forEach(c => g.appendChild(makeBtn(c, () => { state.musicFilter = c; state.cuisineFilter = 'all'; state.arrFilter = 'all'; render(); }, () => state.musicFilter === c)));
