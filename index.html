@@ -150,8 +150,8 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    padding: 20px 24px 16px;
+    gap: 8px;
+    padding: 14px 24px 8px;
     max-width: 1100px;
     margin: 0 auto;
   }
@@ -189,9 +189,9 @@
     color: var(--muted);
     font-family: 'Cormorant Garamond', serif;
     font-style: italic;
-    font-size: 17px;
+    font-size: 16px;
     letter-spacing: 0.06em;
-    padding: 0 24px 40px;
+    padding: 0 24px 18px;
   }
   .count strong { color: var(--accent); font-style: normal; font-weight: 500; font-family: 'DM Sans', sans-serif; font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; }
   .filter-group {
@@ -206,9 +206,9 @@
     background: transparent;
     color: var(--text);
     border: 1px solid var(--accent-2);
-    padding: 7px 18px;
+    padding: 5px 13px;
     font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
+    font-size: 11px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     border-radius: 999px;
@@ -668,23 +668,16 @@ function buildFilters() {
 
   const reset = () => { state.cuisineFilter = 'all'; state.cityFilter = 'all'; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render(); };
 
-  // Top "All" row, centered on its own line
-  const topRow = document.createElement('div');
-  topRow.className = 'filter-row';
-  topRow.appendChild(makeBtn('All', reset,
+  // Cuisine row (with All button inline)
+  const row = document.createElement('div');
+  row.className = 'filter-row';
+  row.innerHTML = '<span class="filter-label compact">Cuisine</span>';
+  row.appendChild(makeBtn('All', reset,
     () => state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all' && state.heartFilter === 'all'));
-  wrap.appendChild(topRow);
-
-  // Cuisine row
   if (cuisines.length) {
-    const row = document.createElement('div');
-    row.className = 'filter-row';
-    row.innerHTML = '<span class="filter-label">Cuisine</span>';
-    const g = document.createElement('div'); g.className = 'filter-group';
-    cuisines.forEach(c => g.appendChild(makeBtn(c, () => { state.cuisineFilter = c; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render(); }, () => state.cuisineFilter === c)));
-    row.appendChild(g);
-    wrap.appendChild(row);
+    cuisines.forEach(c => row.appendChild(makeBtn(c, () => { state.cuisineFilter = c; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render(); }, () => state.cuisineFilter === c)));
   }
+  wrap.appendChild(row);
 
   // Music + Rating combined row (saves vertical space)
   const hasHearts = state.visits.some(v => (parseInt(v.hearts || '0', 10) || 0) > 0);
