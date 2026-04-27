@@ -98,8 +98,11 @@
     text-transform: uppercase; margin-right: 6px;
     min-width: 70px; text-align: right;
   }
+  .filter-label.compact { min-width: 0; }
+  .filter-divider { width: 1px; height: 18px; background: var(--accent-2); opacity: 0.3; margin: 0 8px; }
   @media (max-width: 600px) {
     .filter-label { min-width: 0; width: 100%; text-align: center; margin-right: 0; }
+    .filter-divider { display: none; }
   }
   .filter-btn {
     appearance: none; background: transparent; color: var(--text);
@@ -378,31 +381,40 @@ function buildControls() {
     wrap.appendChild(row);
   }
 
-  // Music row
-  if (musics.length) {
-    const row = document.createElement('div');
-    row.className = 'filter-row';
-    row.innerHTML = '<span class="filter-label">Music</span>';
-    musics.forEach(c => row.appendChild(mkBtn(c, () => { state.filter = 'music:' + c; render(); })));
-    wrap.appendChild(row);
-  }
-
-  // Rating row (hearts)
+  // Music + Rating combined row
   const HEART_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;vertical-align:-1px;margin-left:2px;"><path d="M12 21s-7-4.5-9.5-9C.7 8.6 2.7 4.5 6.4 4.5c2 0 3.5 1.1 4.6 2.7C12.1 5.6 13.6 4.5 15.6 4.5c3.7 0 5.7 4.1 3.9 7.5C19 16.5 12 21 12 21z"/></svg>';
   const hasHearts = allPlaces.some(p => (parseInt(p.visits[0].hearts || '0', 10) || 0) > 0);
-  if (hasHearts) {
+  if (musics.length || hasHearts) {
     const row = document.createElement('div');
     row.className = 'filter-row';
-    row.innerHTML = '<span class="filter-label">Rating</span>';
-    [['1+', '1+' + HEART_SVG], ['2+', '2' + HEART_SVG + HEART_SVG], ['3', '3' + HEART_SVG + HEART_SVG + HEART_SVG]]
-      .forEach(([key, label]) => {
-        const b = document.createElement('button');
-        b.className = 'filter-btn';
-        b.dataset.label = key;
-        b.innerHTML = label;
-        b.addEventListener('click', () => { state.filter = 'hearts:' + key; render(); });
-        row.appendChild(b);
-      });
+
+    if (musics.length) {
+      const lbl = document.createElement('span');
+      lbl.className = 'filter-label compact';
+      lbl.textContent = 'Music';
+      row.appendChild(lbl);
+      musics.forEach(c => row.appendChild(mkBtn(c, () => { state.filter = 'music:' + c; render(); })));
+    }
+
+    if (hasHearts) {
+      const sep = document.createElement('span');
+      sep.className = 'filter-divider';
+      row.appendChild(sep);
+      const lbl = document.createElement('span');
+      lbl.className = 'filter-label compact';
+      lbl.textContent = 'Rating';
+      row.appendChild(lbl);
+      [['1+', '1+' + HEART_SVG], ['2+', '2' + HEART_SVG + HEART_SVG], ['3', '3' + HEART_SVG + HEART_SVG + HEART_SVG]]
+        .forEach(([key, label]) => {
+          const b = document.createElement('button');
+          b.className = 'filter-btn';
+          b.dataset.label = key;
+          b.innerHTML = label;
+          b.addEventListener('click', () => { state.filter = 'hearts:' + key; render(); });
+          row.appendChild(b);
+        });
+    }
+
     wrap.appendChild(row);
   }
 }
