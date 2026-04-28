@@ -495,24 +495,27 @@
   }
   .lightbox .close, .lightbox .nav {
     position: absolute;
-    background: rgba(31,27,24,0.65);
+    background: rgba(31,27,24,0.75);
     color: var(--accent-2);
     border: 1px solid rgba(200,169,126,0.4);
-    width: 46px;
-    height: 46px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     cursor: pointer;
     display: grid;
     place-items: center;
     transition: background 0.2s, transform 0.2s;
     backdrop-filter: blur(8px);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
   }
   .lightbox .close:hover, .lightbox .nav:hover {
     background: var(--accent);
     color: #f5e9d8;
     transform: scale(1.06);
   }
-  .lightbox .close { top: 24px; right: 24px; }
+  .lightbox .close { top: 20px; right: 20px; z-index: 220; }
+  .lightbox .close svg { width: 22px; height: 22px; }
   .lightbox .nav.prev { left: -60px; }
   .lightbox .nav.next { right: -60px; }
   .lightbox .nav svg, .lightbox .close svg { width: 20px; height: 20px; }
@@ -722,7 +725,7 @@ function buildFilters() {
       row.appendChild(lbl);
 
       const HEART_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:11px;height:11px;vertical-align:-1px;margin-left:2px;"><path d="M12 21s-7-4.5-9.5-9C.7 8.6 2.7 4.5 6.4 4.5c2 0 3.5 1.1 4.6 2.7C12.1 5.6 13.6 4.5 15.6 4.5c3.7 0 5.7 4.1 3.9 7.5C19 16.5 12 21 12 21z"/></svg>';
-      [['1+', HEART_SVG + ' Special'], ['2+', HEART_SVG + HEART_SVG + ' Extra'], ['3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
+      [['1', HEART_SVG + ' Special'], ['2', HEART_SVG + HEART_SVG + ' Extra'], ['3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
         .forEach(([key, label]) => {
           const b = document.createElement('button');
           b.className = 'filter-btn';
@@ -778,9 +781,8 @@ function render() {
     if (state.musicFilter !== 'all' && (v.music_tag || '').trim() !== state.musicFilter) return false;
     if (state.heartFilter !== 'all') {
       const h = parseInt(v.hearts || '0', 10) || 0;
-      const min = parseInt(state.heartFilter, 10);
-      if (state.heartFilter === '3') { if (h !== 3) return false; }
-      else if (h < min) return false;
+      const want = parseInt(state.heartFilter, 10);
+      if (h !== want) return false;
     }
     return true;
   });
@@ -794,7 +796,8 @@ function render() {
   } else {
     let tag = [state.cuisineFilter, state.arrFilter, state.musicFilter, state.cityFilter].find(x => x !== 'all') || '';
     if (state.heartFilter !== 'all') {
-      tag = state.heartFilter === '3' ? '3 hearts' : state.heartFilter + ' hearts';
+      const tierName = { '1': 'Special', '2': 'Extra special', '3': 'Magnificent' }[state.heartFilter];
+      tag = tierName || state.heartFilter + ' hearts';
     }
     countEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${total} &nbsp; — &nbsp; <em>${tag}</em>`;
   }
@@ -931,7 +934,12 @@ function showLB() {
   const src = lbState.photos[lbState.i];
   lbImg.src = encodeURI(src);
   lbImg.alt = lbState.name;
-  lbCaption.textContent = `${lbState.name ? lbState.name + ' — ' : ''}${lbState.i + 1} / ${lbState.photos.length}`;
+  const single = lbState.photos.length <= 1;
+  document.getElementById('lbPrev').style.display = single ? 'none' : '';
+  document.getElementById('lbNext').style.display = single ? 'none' : '';
+  lbCaption.textContent = single
+    ? lbState.name
+    : `${lbState.name ? lbState.name + ' — ' : ''}${lbState.i + 1} / ${lbState.photos.length}`;
 }
 function navLB(d) {
   if (!lbState.photos.length) return;

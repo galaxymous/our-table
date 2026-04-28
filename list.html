@@ -222,14 +222,18 @@
   .lightbox.open { display: flex; }
   .lightbox img { max-width: 92vw; max-height: 88vh; object-fit: contain; }
   .lightbox button {
-    position: absolute; top: 24px; right: 24px;
-    background: rgba(31,27,24,0.7); color: var(--accent-2);
-    border: 1px solid var(--accent-2); width: 44px; height: 44px;
+    position: absolute; top: 20px; right: 20px;
+    background: rgba(31,27,24,0.78); color: var(--accent-2);
+    border: 1px solid var(--accent-2); width: 52px; height: 52px;
     border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+    z-index: 220;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    font-size: 26px; line-height: 1;
   }
   .lightbox .nav { top: auto; bottom: 50%; transform: translateY(50%); }
-  .lightbox .nav.prev { left: 24px; right: auto; }
-  .lightbox .nav.next { right: 24px; }
+  .lightbox .nav.prev { left: 20px; right: auto; }
+  .lightbox .nav.next { right: 20px; }
   .lightbox .caption {
     position: absolute; bottom: 24px; left: 0; right: 0;
     text-align: center; color: var(--muted);
@@ -419,7 +423,7 @@ function buildControls() {
       lbl.className = 'filter-label compact';
       lbl.textContent = 'Rating';
       row.appendChild(lbl);
-      [['1+', HEART_SVG + ' Special'], ['2+', HEART_SVG + HEART_SVG + ' Extra'], ['3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
+      [['1', HEART_SVG + ' Special'], ['2', HEART_SVG + HEART_SVG + ' Extra'], ['3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
         .forEach(([key, label]) => {
           const b = document.createElement('button');
           b.className = 'filter-btn';
@@ -459,8 +463,7 @@ function matches(p) {
     if (kind === 'arr' && (p.arrondissement || '').trim() !== val) return false;
     if (kind === 'hearts') {
       const h = parseInt(p.visits[0].hearts || '0', 10) || 0;
-      if (val === '3') { if (h !== 3) return false; }
-      else { if (h < parseInt(val, 10)) return false; }
+      if (h !== parseInt(val, 10)) return false;
     }
   }
   if (state.search) {
@@ -585,7 +588,10 @@ function closeLB() { lb.classList.remove('open'); document.body.style.overflow =
 function showLB() {
   if (!lbState.photos.length) return;
   lbImg.src = encodeURI(lbState.photos[lbState.i]);
-  lbCap.textContent = `${lbState.name} — ${lbState.i+1} / ${lbState.photos.length}`;
+  const single = lbState.photos.length <= 1;
+  document.getElementById('lbPrev').style.display = single ? 'none' : '';
+  document.getElementById('lbNext').style.display = single ? 'none' : '';
+  lbCap.textContent = single ? lbState.name : `${lbState.name} — ${lbState.i+1} / ${lbState.photos.length}`;
 }
 function navLB(d) {
   lbState.i = (lbState.i + d + lbState.photos.length) % lbState.photos.length;

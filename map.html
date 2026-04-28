@@ -423,7 +423,7 @@ function buildFilters() {
     lbl.className = 'filter-label compact';
     lbl.textContent = 'Rating';
     topRow.appendChild(lbl);
-    [['hearts:1+', HEART_SVG + ' Special'], ['hearts:2+', HEART_SVG + HEART_SVG + ' Extra'], ['hearts:3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
+    [['hearts:1', HEART_SVG + ' Special'], ['hearts:2', HEART_SVG + HEART_SVG + ' Extra'], ['hearts:3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
       .forEach(([key, label]) => {
         const b = document.createElement('button');
         b.className = 'filter-btn';
@@ -467,8 +467,7 @@ function matches(p) {
     if (activeFilter.startsWith('hearts:')) {
       const val = activeFilter.split(':')[1];
       const h = parseInt(p.visits[0].hearts || '0', 10) || 0;
-      if (val === '3') { if (h !== 3) return false; }
-      else { if (h < parseInt(val, 10)) return false; }
+      if (h !== parseInt(val, 10)) return false;
     } else if ((p.arrondissement || '').trim() !== activeFilter) {
       return false;
     }
