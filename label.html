@@ -302,7 +302,7 @@ function buildVisit(r, idx) {
       </div>
     </div>
     <div class="field">
-      <label>Coup de cœur — how many hearts?</label>
+      <label>Coup de cœur — 1: special · 2: extra special · 3: magnificent</label>
       <div class="hearts-picker" data-hearts="${parseInt(r.hearts || '0', 10) || 0}">
         ${[1,2,3].map(i => `<span class="heart ${i <= (parseInt(r.hearts||'0',10)||0) ? '' : 'dim'}" data-h="${i}"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C.7 8.6 2.7 4.5 6.4 4.5c2 0 3.5 1.1 4.6 2.7C12.1 5.6 13.6 4.5 15.6 4.5c3.7 0 5.7 4.1 3.9 7.5C19 16.5 12 21 12 21z"/></svg></span>`).join('')}
         <button type="button" class="clear">Clear</button>

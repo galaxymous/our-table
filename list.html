@@ -419,7 +419,7 @@ function buildControls() {
       lbl.className = 'filter-label compact';
       lbl.textContent = 'Rating';
       row.appendChild(lbl);
-      [['1+', '1+' + HEART_SVG], ['2+', '2' + HEART_SVG + HEART_SVG], ['3', '3' + HEART_SVG + HEART_SVG + HEART_SVG]]
+      [['1+', HEART_SVG + ' Special'], ['2+', HEART_SVG + HEART_SVG + ' Extra'], ['3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
         .forEach(([key, label]) => {
           const b = document.createElement('button');
           b.className = 'filter-btn';
@@ -535,8 +535,9 @@ function buildRow(p) {
   const music = (p.music_tag || '').trim();
   const michelin = (p.michelin_tag || '').trim();
   const hearts = parseInt(p.visits[0].hearts || '0', 10) || 0;
+  const heartTitles = { 1: 'Special', 2: 'Extra special', 3: 'Magnificent' };
   const heartsHTML = hearts > 0
-    ? `<span class="hearts">${[1,2,3].map(i => i <= hearts ? HEART : HEART.replace('<svg','<svg class="dim"')).join('')}</span>`
+    ? `<span class="hearts" title="${heartTitles[hearts] || ''}">${HEART.repeat(hearts)}</span>`
     : '';
   const notesAll = p.visits.map(v => (v.notes || '').trim()).filter(Boolean);
   const notes = notesAll[0] || '';

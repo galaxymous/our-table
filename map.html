@@ -423,7 +423,7 @@ function buildFilters() {
     lbl.className = 'filter-label compact';
     lbl.textContent = 'Rating';
     topRow.appendChild(lbl);
-    [['hearts:1+', '1+' + HEART_SVG], ['hearts:2+', '2' + HEART_SVG + HEART_SVG], ['hearts:3', '3' + HEART_SVG + HEART_SVG + HEART_SVG]]
+    [['hearts:1+', HEART_SVG + ' Special'], ['hearts:2+', HEART_SVG + HEART_SVG + ' Extra'], ['hearts:3', HEART_SVG + HEART_SVG + HEART_SVG + ' Magnificent']]
       .forEach(([key, label]) => {
         const b = document.createElement('button');
         b.className = 'filter-btn';
@@ -586,8 +586,9 @@ function buildPopup(p) {
   const music = (p.music_tag || '').trim();
   const michelin = (p.michelin_tag || '').trim();
   const hearts = parseInt(visits[0].hearts || '0', 10) || 0;
+  const heartTitles = { 1: 'Special', 2: 'Extra special', 3: 'Magnificent' };
   const heartsHTML = hearts > 0
-    ? `<span class="hearts">${[1,2,3].map(i => i <= hearts ? HEART : HEART.replace('<svg','<svg class="dim"')).join('')}</span>`
+    ? `<span class="hearts" title="${heartTitles[hearts] || ''}">${HEART.repeat(hearts)}</span>`
     : '';
   const notesAll = visits.map(v => v.notes).filter(Boolean);
   const notesHTML = notesAll.length ? `<div class="notes">${esc(notesAll[0])}</div>` : '';
