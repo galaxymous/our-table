@@ -623,6 +623,21 @@ themeBtn.addEventListener('click', () => {
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const state = { visits: [], cuisineFilter: 'all', cityFilter: 'all', arrFilter: 'all', musicFilter: 'all', heartFilter: 'all' };
 
+// Cuisine groupings: filter bar shows the group name; cards keep showing the specific cuisine.
+// A cuisine_type can belong to multiple groups (e.g. "Latino, asian" → Asian + Latin American).
+const CUISINE_GROUPS = [
+  { label: 'French',         match: /\bfrench\b/i },
+  { label: 'Italian',        match: /\bitalian\b/i },
+  { label: 'Asian',          match: /\b(asian|japanese|chinese|korean|vietnamese|thai|asiatic)\b/i },
+  { label: 'Latin American', match: /\b(latin|latino|ecuadorian|argentin|peruvian|mexican|brazilian|colombian)\b/i },
+];
+function cuisineMatchesGroup(cuisine, groupLabel) {
+  const c = (cuisine || '').trim();
+  if (!c) return false;
+  const g = CUISINE_GROUPS.find(x => x.label === groupLabel);
+  return g ? g.match.test(c) : false;
+}
+
 function fmtDate(s) {
   const d = new Date(s + 'T00:00:00');
   if (isNaN(d)) return s;
@@ -661,22 +676,26 @@ function parseCSV() {
 
 /* ------------------ FILTERS ------------------ */
 function buildFilters() {
-  const cuisines = [...new Set(state.visits.map(v => (v.cuisine_type || '').trim()).filter(Boolean))].sort();
+  // Build the filter bar from cuisine GROUPS, not raw cuisine values.
+  // Only show a group if at least one visit matches it.
+  const cuisineGroups = CUISINE_GROUPS
+    .map(g => g.label)
+    .filter(label => state.visits.some(v => cuisineMatchesGroup(v.cuisine_type, label)));
   const musics = [...new Set(state.visits.map(v => (v.music_tag || '').trim()).filter(Boolean))].sort();
   const wrap = document.getElementById('filters');
   wrap.innerHTML = '';
 
   const reset = () => { state.cuisineFilter = 'all'; state.cityFilter = 'all'; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render(); };
 
-  // Cuisine row (with All button inline)
+  // Cuisine row (with All button inline) — uses cuisine GROUPS
   const row = document.createElement('div');
   row.className = 'filter-row';
   row.innerHTML = '<span class="filter-label compact">Cuisine</span>';
   row.appendChild(makeBtn('All', reset,
     () => state.cuisineFilter === 'all' && state.cityFilter === 'all' && state.arrFilter === 'all' && state.musicFilter === 'all' && state.heartFilter === 'all'));
-  if (cuisines.length) {
-    cuisines.forEach(c => row.appendChild(makeBtn(c, () => { state.cuisineFilter = c; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render(); }, () => state.cuisineFilter === c)));
-  }
+  cuisineGroups.forEach(g => row.appendChild(makeBtn(g, () => {
+    state.cuisineFilter = g; state.arrFilter = 'all'; state.musicFilter = 'all'; state.heartFilter = 'all'; render();
+  }, () => state.cuisineFilter === g)));
   wrap.appendChild(row);
 
   // Music + Rating combined row (saves vertical space)
@@ -753,7 +772,7 @@ function render() {
   tl.innerHTML = '';
 
   const filtered = state.visits.filter(v => {
-    if (state.cuisineFilter !== 'all' && (v.cuisine_type || '').trim() !== state.cuisineFilter) return false;
+    if (state.cuisineFilter !== 'all' && !cuisineMatchesGroup(v.cuisine_type, state.cuisineFilter)) return false;
     if (state.cityFilter !== 'all' && (v.city || '').trim() !== state.cityFilter) return false;
     if (state.arrFilter !== 'all' && (v.arrondissement || '').trim() !== state.arrFilter) return false;
     if (state.musicFilter !== 'all' && (v.music_tag || '').trim() !== state.musicFilter) return false;

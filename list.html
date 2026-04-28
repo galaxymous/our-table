@@ -322,6 +322,19 @@ function arrSort(a, b) {
 let allPlaces = [];
 let state = { filter: 'all', search: '', sort: 'name' };
 
+const CUISINE_GROUPS = [
+  { label: 'French',         match: /\bfrench\b/i },
+  { label: 'Italian',        match: /\bitalian\b/i },
+  { label: 'Asian',          match: /\b(asian|japanese|chinese|korean|vietnamese|thai|asiatic)\b/i },
+  { label: 'Latin American', match: /\b(latin|latino|ecuadorian|argentin|peruvian|mexican|brazilian|colombian)\b/i },
+];
+function cuisineMatchesGroup(cuisine, groupLabel) {
+  const c = (cuisine || '').trim();
+  if (!c) return false;
+  const g = CUISINE_GROUPS.find(x => x.label === groupLabel);
+  return g ? g.match.test(c) : false;
+}
+
 Papa.parse('restaurant_claude.csv', {
   download: true, header: true, skipEmptyLines: true,
   complete: (res) => {
@@ -345,7 +358,9 @@ Papa.parse('restaurant_claude.csv', {
 function buildControls() {
   const wrap = document.getElementById('controls');
   wrap.innerHTML = '';
-  const cuisines = [...new Set(allPlaces.map(p => (p.cuisine_type || '').trim()).filter(Boolean))].sort();
+  const cuisineGroups = CUISINE_GROUPS
+    .map(g => g.label)
+    .filter(label => allPlaces.some(p => cuisineMatchesGroup(p.cuisine_type, label)));
   const musics = [...new Set(allPlaces.map(p => (p.music_tag || '').trim()).filter(Boolean))].sort();
 
   // Top row: sort + search + All
@@ -372,12 +387,12 @@ function buildControls() {
   topRow.appendChild(mkBtn('All', () => { state.filter = 'all'; render(); }));
   wrap.appendChild(topRow);
 
-  // Cuisine row
-  if (cuisines.length) {
+  // Cuisine row — uses cuisine GROUPS
+  if (cuisineGroups.length) {
     const row = document.createElement('div');
     row.className = 'filter-row';
     row.innerHTML = '<span class="filter-label">Cuisine</span>';
-    cuisines.forEach(c => row.appendChild(mkBtn(c, () => { state.filter = 'cuisine:' + c; render(); })));
+    cuisineGroups.forEach(g => row.appendChild(mkBtn(g, () => { state.filter = 'cuisine:' + g; render(); })));
     wrap.appendChild(row);
   }
 
@@ -439,7 +454,7 @@ function refreshActive() {
 function matches(p) {
   if (state.filter !== 'all') {
     const [kind, val] = state.filter.split(':');
-    if (kind === 'cuisine' && (p.cuisine_type || '').trim() !== val) return false;
+    if (kind === 'cuisine' && !cuisineMatchesGroup(p.cuisine_type, val)) return false;
     if (kind === 'music' && (p.music_tag || '').trim() !== val) return false;
     if (kind === 'arr' && (p.arrondissement || '').trim() !== val) return false;
     if (kind === 'hearts') {
